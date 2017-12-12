@@ -39,7 +39,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Orders\Discounts\QuantityAtPriceDiscount.cs" />
     <Compile Include="Orders\OrderInfo.cs" />
+    <Compile Include="Orders\OrderLine.cs" />
     <Compile Include="RecieptFormatters\HtmlReceiptFormatter.cs" />
     <Compile Include="RecieptFormatters\IReceiptFormatter.cs" />
     <Compile Include="Order.cs" />

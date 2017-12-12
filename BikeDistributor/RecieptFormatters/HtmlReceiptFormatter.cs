@@ -8,44 +8,21 @@ namespace BikeDistributor.RecieptFormatters
     {
         public string GetReceiptForOrder(OrderInfo orderInfo)
         {
-            var totalAmount = 0d;
-            var result = new StringBuilder(string.Format("<html><body><h1>Order Receipt for {0}</h1>", orderInfo.Company));
+            var totalAmount = orderInfo.Lines.Sum(l => l.AdjustedLinePrice);
+            var result = new StringBuilder($"<html><body><h1>Order Receipt for {orderInfo.Company}</h1>");
             if (orderInfo.Lines.Any())
             {
                 result.Append("<ul>");
                 foreach (var line in orderInfo.Lines)
                 {
-                    var thisAmount = 0d;
-                    switch (line.Bike.Price)
-                    {
-                        case Bike.OneThousand:
-                            if (line.Quantity >= 20)
-                                thisAmount += line.Quantity * line.Bike.Price * .9d;
-                            else
-                                thisAmount += line.Quantity * line.Bike.Price;
-                            break;
-                        case Bike.TwoThousand:
-                            if (line.Quantity >= 10)
-                                thisAmount += line.Quantity * line.Bike.Price * .8d;
-                            else
-                                thisAmount += line.Quantity * line.Bike.Price;
-                            break;
-                        case Bike.FiveThousand:
-                            if (line.Quantity >= 5)
-                                thisAmount += line.Quantity * line.Bike.Price * .8d;
-                            else
-                                thisAmount += line.Quantity * line.Bike.Price;
-                            break;
-                    }
-                    result.Append(string.Format("<li>{0} x {1} {2} = {3}</li>", line.Quantity, line.Bike.Brand, line.Bike.Model, thisAmount.ToString("C")));
-                    totalAmount += thisAmount;
+                    result.Append($"<li>{line.Quantity} x {line.Bike.Brand} {line.Bike.Model} = {line.AdjustedLinePrice:C}</li>");
                 }
                 result.Append("</ul>");
             }
-            result.Append(string.Format("<h3>Sub-Total: {0}</h3>", totalAmount.ToString("C")));
+            result.Append($"<h3>Sub-Total: {totalAmount:C}</h3>");
             var tax = totalAmount * orderInfo.TaxRate;
-            result.Append(string.Format("<h3>Tax: {0}</h3>", tax.ToString("C")));
-            result.Append(string.Format("<h2>Total: {0}</h2>", (totalAmount + tax).ToString("C")));
+            result.Append($"<h3>Tax: {tax:C}</h3>");
+            result.Append($"<h2>Total: {(totalAmount + tax):C}</h2>");
             result.Append("</body></html>");
             return result.ToString();
         }
