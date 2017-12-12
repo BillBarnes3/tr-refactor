@@ -8,9 +8,9 @@ namespace BikeDistributor.Orders.Discounts
 {
     public class QuantityAtPriceDiscount
     {
-        public double QualifyingPrice { get; private set; }
-        public int QuantityRequired { get; private set; }
-        public double Multiplier { get; private set; }
+        public double QualifyingPrice { get; }
+        public int QuantityRequired { get; }
+        public double Multiplier { get; }
 
         public QuantityAtPriceDiscount(double qualifyingPrice, int quantityRequired, double multiplier)
         {
