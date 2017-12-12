@@ -1,21 +1,64 @@
-﻿using System;
+﻿using BikeDistributor.Orders;
+using BikeDistributor.RecieptFormatters;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using BikeDistributor.Orders.Discounts;
 
 namespace BikeDistributor
 {
     public class Order
     {
-        private const double TaxRate = .0725d;
+        private const double DefaultTaxRate = .0725d;
         private readonly IList<Line> _lines = new List<Line>();
 
-        public Order(string company)
+        private readonly IEnumerable<QuantityAtPriceDiscount> _discounts;
+        private static readonly IEnumerable<QuantityAtPriceDiscount> defaultDiscounts = new List<QuantityAtPriceDiscount>()
         {
-            Company = company;
+            new QuantityAtPriceDiscount(Bike.OneThousand, 20, .9d),
+            new QuantityAtPriceDiscount(Bike.TwoThousand, 10, .8d),
+            new QuantityAtPriceDiscount(Bike.FiveThousand, 5, .8d)
+        };
+
+        /// <summary>
+        /// Creates a new order with the default discounting structure in place.
+        /// </summary>
+        /// <param name="company">The name of the company on the order.</param>
+        public Order(string company) : this(company, DefaultTaxRate, defaultDiscounts)
+        {
         }
 
-        public string Company { get; private set; }
+        /// <summary>
+        /// Creates a new order with the default discounting structure in place.
+        /// </summary>
+        /// <param name="company">The name of the company on the order.</param>
+        /// <param name="taxRate">The tax rate to use for the order</param>
+        public Order(string company, double taxRate) : this(company, taxRate, defaultDiscounts)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new order with specified quantity/price discounting.
+        /// </summary>
+        /// <param name="company">The name of the company on the order.</param>
+        /// <param name="discounts">A Collection of price/discount objects that sets thresholds for discounting (only the best discount is used)</param>
+        public Order(string company, IEnumerable<QuantityAtPriceDiscount> discounts) : this(company, DefaultTaxRate, discounts)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new order with specified quantity/price discounting.
+        /// </summary>
+        /// <param name="company">The name of the company on the order.</param>
+        /// <param name="taxRate">The tax rate to use for the order</param>
+        /// <param name="discounts">A Collection of price/discount objects that sets thresholds for discounting (only the best discount is used)</param>
+        public Order(string company, double taxRate, IEnumerable<QuantityAtPriceDiscount> discounts)
+        {
+            Company = company;
+            _discounts = discounts;
+        }
+        
+
+        public string Company { get; }
 
         public void AddLine(Line line)
         {
@@ -24,84 +67,26 @@ namespace BikeDistributor
 
         public string Receipt()
         {
-            var totalAmount = 0d;
-            var result = new StringBuilder(string.Format("Order Receipt for {0}{1}", Company, Environment.NewLine));
-            foreach (var line in _lines)
-            {
-                var thisAmount = 0d;
-                switch (line.Bike.Price)
-                {
-                    case Bike.OneThousand:
-                        if (line.Quantity >= 20)
-                            thisAmount += line.Quantity * line.Bike.Price * .9d;
-                        else
-                            thisAmount += line.Quantity * line.Bike.Price;
-                        break;
-                    case Bike.TwoThousand:
-                        if (line.Quantity >= 10)
-                            thisAmount += line.Quantity * line.Bike.Price * .8d;
-                        else
-                            thisAmount += line.Quantity * line.Bike.Price;
-                        break;
-                    case Bike.FiveThousand:
-                        if (line.Quantity >= 5)
-                            thisAmount += line.Quantity * line.Bike.Price * .8d;
-                        else
-                            thisAmount += line.Quantity * line.Bike.Price;
-                        break;
-                }
-                result.AppendLine(string.Format("\t{0} x {1} {2} = {3}", line.Quantity, line.Bike.Brand, line.Bike.Model, thisAmount.ToString("C")));
-                totalAmount += thisAmount;
-            }
-            result.AppendLine(string.Format("Sub-Total: {0}", totalAmount.ToString("C")));
-            var tax = totalAmount * TaxRate;
-            result.AppendLine(string.Format("Tax: {0}", tax.ToString("C")));
-            result.Append(string.Format("Total: {0}", (totalAmount + tax).ToString("C")));
-            return result.ToString();
+            return GetReceiptString(new TextReceiptFormatter());
         }
 
         public string HtmlReceipt()
         {
-            var totalAmount = 0d;
-            var result = new StringBuilder(string.Format("<html><body><h1>Order Receipt for {0}</h1>", Company));
-            if (_lines.Any())
+            return GetReceiptString(new HtmlReceiptFormatter());
+        }
+
+        private string GetReceiptString(IReceiptFormatter formatterType)
+        {
+            var orderInfo = new OrderInfo
             {
-                result.Append("<ul>");
-                foreach (var line in _lines)
-                {
-                    var thisAmount = 0d;
-                    switch (line.Bike.Price)
-                    {
-                        case Bike.OneThousand:
-                            if (line.Quantity >= 20)
-                                thisAmount += line.Quantity*line.Bike.Price*.9d;
-                            else
-                                thisAmount += line.Quantity*line.Bike.Price;
-                            break;
-                        case Bike.TwoThousand:
-                            if (line.Quantity >= 10)
-                                thisAmount += line.Quantity*line.Bike.Price*.8d;
-                            else
-                                thisAmount += line.Quantity*line.Bike.Price;
-                            break;
-                        case Bike.FiveThousand:
-                            if (line.Quantity >= 5)
-                                thisAmount += line.Quantity*line.Bike.Price*.8d;
-                            else
-                                thisAmount += line.Quantity*line.Bike.Price;
-                            break;
-                    }
-                    result.Append(string.Format("<li>{0} x {1} {2} = {3}</li>", line.Quantity, line.Bike.Brand, line.Bike.Model, thisAmount.ToString("C")));
-                    totalAmount += thisAmount;
-                }
-                result.Append("</ul>");
-            }
-            result.Append(string.Format("<h3>Sub-Total: {0}</h3>", totalAmount.ToString("C")));
-            var tax = totalAmount * TaxRate;
-            result.Append(string.Format("<h3>Tax: {0}</h3>", tax.ToString("C")));
-            result.Append(string.Format("<h2>Total: {0}</h2>", (totalAmount + tax).ToString("C")));
-            result.Append("</body></html>");
-            return result.ToString();
+                Company = Company,
+                Lines = _lines.Select(line => new OrderLine(line)).ToList(),
+                TaxRate = DefaultTaxRate,
+                Discounts = _discounts
+            };
+
+            orderInfo.ApplyQuantityDiscounts();
+            return formatterType.GetReceiptForOrder(orderInfo);
         }
 
     }
